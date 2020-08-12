@@ -1,0 +1,142 @@
+#!/bin/python3
+#
+# Copyright (C) 2020 Erich Focht
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+import configparser
+import gitlab
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import pdb
+
+config = None
+
+zipfn = "artifacts.zip"
+
+
+def sigint_handler(signum, frame):
+    sys.exit()
+
+def pull_artifacts(project, job):
+    rootpath = config['SERVE'].get('path')
+    
+    print("pulling artifacts: %s %r" % (project.path_with_namespace, job))
+    # copy artifact
+    tgt_path = os.path.join(rootpath, project.path_with_namespace)
+    os.makedirs(tgt_path, 0o755)
+    os.chdir(tgt_path)
+
+    # delete old artifacts file, if it exists
+    if os.path.exists(zipfn):
+        os.unlink(zipfn)
+
+    # pull artifacts file from gitlab
+    with open(zipfn, "wb") as f:
+        job.artifacts(streamed=True, action=f.write)
+
+    # rename target
+    if os.path.exists("public_old"):
+        shutil.rmtree("public_old")
+    if os.path.exists("public"):
+        os.rename("public", "public_old")
+
+    # unpack zip file
+    subprocess.run(["unzip", "-bo", zipfn])
+    os.unlink(zipfn)
+
+    os.chdir(rootpath)
+    # notify pages-daemon of change
+    uval = 0
+    with open(".update", "rb") as f:
+        uval = f.read()
+    with open(".update", "wb") as f:
+        f.write(uval)
+
+def check_projects(timestamp):
+    url = config['GITLAB'].get('url')
+    token = config['GITLAB'].get('token')
+    runner_pat = config['GITLAB'].get('runner', 'gitlab-runner-pages')
+    runner_re = re.compile(runner_pat)
+                                      
+    new_timestamp = timestamp
+    gl = gitlab.Gitlab(url, private_token=token, timeout=5)
+
+    # Using the configuration file doesn't work
+    #gl = gitlab.Gitlab(URL,['/hpc/uhome/extefoch/.python-gitlab.cfg'])
+
+    gl.auth()
+    projects = gl.projects.list(retry_transient_errors=True)
+    for project in projects:
+        #print(project.path_with_namespace)
+        jids = list()
+        try:
+            jids = [j.id for j in project.jobs.list(retry_transient_errors=True)]
+        except:
+            pass
+        jobs = list()
+        for jid in jids:
+            job = project.jobs.get(jid, retry_transient_errors=True)
+            if job is None or job.runner is None:
+                continue
+            m = runner_re.match(job.runner["description"])
+            if m is not None:
+                jobs.append(job)
+
+        if len(jobs) == 0:
+            continue
+
+        # make really sure jobs are sorted properly
+        # (they actually seem to come in the right order)
+        jobs = sorted(jobs, key=lambda j: j.finished_at, reverse=True)
+
+        # only newest pages job is considered
+        job = jobs[0]
+        if job.finished_at < timestamp:
+            try:
+                pull_artifacts(project, job)
+            except Exception as e:
+                print("WARNING: %r occured while pulling artifacts for job %r"
+                      % (e, job))
+            new_timestamp = job.finished_at
+
+    return new_timestamp
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage:\n\t%s <config>\n")
+        sys.exit()
+
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGHUP, sigint_handler)
+    
+    config = configparser.ConfigParser()
+    config.read(sys.argv[1])
+
+    timestamp = config['SERVE'].get('timestamp', '1970')
+    interval = int(config['SERVE'].get('interval', 300))
+
+    while True:
+        try:
+            timestamp = check_projects(timestamp)
+        except:
+            pass
+        time.sleep(interval)
