@@ -32,3 +32,12 @@ next round.
 Run the `pull_pages` program with the configuration file as argument. A sample config
 is provided, fill in the URL and your personal gitlab access token. The token should
 come from the admin user and have API read access rights.
+
+### Dependencies
+
+Inside the container you will need python3 and some modules. You should at least do
+something like
+```
+pip install --upgrade gitlab configparser
+```
+
