@@ -38,6 +38,6 @@ come from the admin user and have API read access rights.
 Inside the container you will need python3 and some modules. You should at least do
 something like
 ```
-pip install --upgrade gitlab configparser
+pip3 install --upgrade gitlab configparser
 ```
 
