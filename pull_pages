@@ -66,13 +66,6 @@ def pull_artifacts(project, job):
     subprocess.run(["unzip", "-bo", zipfn])
     os.unlink(zipfn)
 
-    os.chdir(rootpath)
-    # notify pages-daemon of change
-    uval = 0
-    with open(".update", "rb") as f:
-        uval = f.read()
-    with open(".update", "wb") as f:
-        f.write(uval + 1)
 
 def check_projects(timestamp):
     url = config['GITLAB'].get('url')
@@ -124,6 +117,18 @@ def check_projects(timestamp):
     return new_timestamp
 
 
+def notify_pages():
+    rootpath = config['SERVE'].get('path')
+    os.chdir(rootpath)
+    uval = 0
+    if os.path.exists(".update"):
+        with open(".update", "rb") as f:
+            uval = int.from_bytes(f.read(), byteorder='big')
+        uval = uval + 1
+    with open(".update", "wb") as f:
+        f.write((uval).to_bytes(8, byteorder='big'))
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage:\n\t%s <config>\n")
@@ -137,10 +142,15 @@ if __name__ == '__main__':
 
     timestamp = config['SERVE'].get('timestamp', '1970')
     interval = int(config['SERVE'].get('interval', 300))
+    new_timestamp = timestamp
 
     while True:
         try:
-            timestamp = check_projects(timestamp)
+            new_timestamp = check_projects(timestamp)
         except:
             pass
+        if new_timestamp > timestamp:
+            timestamp = new_timestamp
+            notify_pages()
+
         time.sleep(interval)
