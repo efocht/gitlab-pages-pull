@@ -72,7 +72,7 @@ def pull_artifacts(project, job):
     with open(".update", "rb") as f:
         uval = f.read()
     with open(".update", "wb") as f:
-        f.write(uval)
+        f.write(uval + 1)
 
 def check_projects(timestamp):
     url = config['GITLAB'].get('url')
