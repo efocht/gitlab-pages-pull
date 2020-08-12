@@ -25,10 +25,8 @@ import signal
 import subprocess
 import sys
 import time
-import pdb
 
 config = None
-
 zipfn = "artifacts.zip"
 
 
@@ -41,7 +39,13 @@ def pull_artifacts(project, job):
     print("pulling artifacts: %s %r" % (project.path_with_namespace, job))
     # copy artifact
     tgt_path = os.path.join(rootpath, project.path_with_namespace)
-    os.makedirs(tgt_path, 0o755)
+    try:
+        os.makedirs(tgt_path, 0o755)
+    except FileExistsError:
+        pass
+    except Exception as e:
+        raise(e)
+
     os.chdir(tgt_path)
 
     # delete old artifacts file, if it exists
