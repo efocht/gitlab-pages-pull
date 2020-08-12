@@ -109,7 +109,7 @@ def check_projects(timestamp):
 
         # only newest pages job is considered
         job = jobs[0]
-        if job.finished_at < timestamp:
+        if job.finished_at > timestamp:
             try:
                 pull_artifacts(project, job)
             except Exception as e:
