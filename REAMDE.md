@@ -37,4 +37,6 @@ something like
 ```
 pip3 install --upgrade requests python-gitlab configparser
 ```
+You will also need the `unzip` binary around.
+
 

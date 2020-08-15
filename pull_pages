@@ -63,7 +63,11 @@ def pull_artifacts(project, job):
         os.rename("public", "public_old")
 
     # unpack zip file
-    subprocess.run(["unzip", "-bo", zipfn])
+    try:
+        subprocess.run(["unzip", "-bo", zipfn])
+    except PermissionError as e:
+        print("unip: %r" % e)
+        raise e
     os.unlink(zipfn)
 
 
