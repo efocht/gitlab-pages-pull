@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python3
 #
 # Copyright (C) 2020 Erich Focht
 #
@@ -70,8 +70,6 @@ def pull_artifacts(project, job):
 def check_projects(timestamp):
     url = config['GITLAB'].get('url')
     token = config['GITLAB'].get('token')
-    runner_pat = config['GITLAB'].get('runner', 'gitlab-runner-pages')
-    runner_re = re.compile(runner_pat)
                                       
     new_timestamp = timestamp
     gl = gitlab.Gitlab(url, private_token=token, timeout=5)
@@ -91,10 +89,9 @@ def check_projects(timestamp):
         jobs = list()
         for jid in jids:
             job = project.jobs.get(jid, retry_transient_errors=True)
-            if job is None or job.runner is None:
+            if job is None or job.runner or job.name is None:
                 continue
-            m = runner_re.match(job.runner["description"])
-            if m is not None:
+            if job.name == "pages":
                 jobs.append(job)
 
         if len(jobs) == 0:
@@ -131,7 +128,7 @@ def notify_pages():
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage:\n\t%s <config>\n")
+        print("Usage:\n\t%s <config>\n" % sys.argv[0])
         sys.exit()
 
     signal.signal(signal.SIGINT, sigint_handler)

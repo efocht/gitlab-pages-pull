@@ -18,10 +18,7 @@ When starting the `gitlab-pages` you need to pass it a root pages directory:
 ./gitlab-pages -listen-http ":80" -pages-root /tmp/pages -pages-domain pages.yourdomain
 ```
 
-Pages are generated as part of a CI pipeline. Make sure the pipeline is executed by a
-specific runner, which you can select in the pipeline definition by setting a tag. For
-example the "pages" tag. Running on the special runner makes it easier to find the jobs
-which are generating pages.
+Pages are generated as part of a CI pipeline, the job name attribute is set to "pages".
 
 This program uses the gitlab API to find all projects and for each project the jobs
 that were run. The youngest of the jobs that is younger than a certain timestamp will
@@ -38,6 +35,6 @@ come from the admin user and have API read access rights.
 Inside the container you will need python3 and some modules. You should at least do
 something like
 ```
-pip3 install --upgrade gitlab configparser
+pip3 install --upgrade requests python-gitlab configparser
 ```
 
