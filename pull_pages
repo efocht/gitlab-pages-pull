@@ -87,15 +87,15 @@ def check_projects(timestamp):
         #print(project.path_with_namespace)
         jids = list()
         try:
-            jids = [j.id for j in project.jobs.list(retry_transient_errors=True)]
+            jids = [j.id for j in project.jobs.list(scope='success', retry_transient_errors=True)]
         except:
             pass
         jobs = list()
         for jid in jids:
             job = project.jobs.get(jid, retry_transient_errors=True)
-            if job is None or job.runner or job.name is None:
+            if job is None or job.runner is None or job.name is None:
                 continue
-            if job.name == "pages":
+            if job.name == "pages" and hasattr(job, 'artifacts_file'):
                 jobs.append(job)
 
         if len(jobs) == 0:
