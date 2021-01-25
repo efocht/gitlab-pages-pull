@@ -93,10 +93,11 @@ def check_projects(timestamp):
         jobs = list()
         for jid in jids:
             job = project.jobs.get(jid, retry_transient_errors=True)
-            if job is None or job.runner is None or job.name is None:
+            if job is None or job.name is None:
                 continue
             if job.name == "pages" and hasattr(job, 'artifacts_file'):
                 jobs.append(job)
+                break;
 
         if len(jobs) == 0:
             continue
