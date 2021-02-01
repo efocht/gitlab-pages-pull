@@ -82,7 +82,7 @@ def check_projects(timestamp):
     #gl = gitlab.Gitlab(URL,['/hpc/uhome/extefoch/.python-gitlab.cfg'])
 
     gl.auth()
-    projects = gl.projects.list(retry_transient_errors=True)
+    projects = gl.projects.list(all=True, retry_transient_errors=True)
     for project in projects:
         #print(project.path_with_namespace)
         jids = list()
